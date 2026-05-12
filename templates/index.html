@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Card match</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='recommender.css') }}" />
+  </head>
+  <body>
+    <div id="root" data-phase="input">
+      <section id="panel-input" class="panel panel--input" aria-labelledby="title-input">
+        <header class="mast">
+          <p class="mast__eyebrow">Eligibility ideas</p>
+          <h1 id="title-input" class="mast__title">Your profile</h1>
+          <p class="mast__lede">A few numbers—then a quiet read-through of options. Not financial advice.</p>
+        </header>
+
+        <form id="form-profile" class="form" autocomplete="on">
+          <div class="form__grid">
+            <label class="field">
+              <span class="field__label">Credit score</span>
+              <input name="credit_score" type="number" min="300" max="850" required placeholder="720" />
+            </label>
+            <label class="field">
+              <span class="field__label">Annual income (USD)</span>
+              <input name="annual_income" type="number" min="0" step="1000" required placeholder="85000" />
+            </label>
+            <label class="field field--wide">
+              <span class="field__label">Location</span>
+              <input name="location" type="text" placeholder="State (CA) or region" />
+            </label>
+            <label class="field">
+              <span class="field__label">Housing</span>
+              <select name="housing" required>
+                <option value="" disabled selected>Choose</option>
+                <option value="rent">Rent</option>
+                <option value="own">Own</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field__label">Credit history (years)</span>
+              <input name="credit_history_years" type="number" min="0" step="0.5" placeholder="Optional" />
+            </label>
+            <label class="field">
+              <span class="field__label">Debt-to-income (0.35 or 35)</span>
+              <input name="debt_to_income_ratio" type="text" placeholder="Optional" />
+            </label>
+            <label class="field">
+              <span class="field__label">Years at current job</span>
+              <input name="employment_years" type="number" min="0" step="0.5" placeholder="Optional" />
+            </label>
+            <label class="field">
+              <span class="field__label">Hard inquiries (12 mo)</span>
+              <input name="recent_hard_inquiries_12m" type="number" min="0" step="1" placeholder="Optional" />
+            </label>
+            <label class="field">
+              <span class="field__label">Monthly card spend (USD)</span>
+              <input name="estimated_monthly_card_spend" type="number" min="0" step="100" placeholder="Optional" />
+            </label>
+            <label class="field field--check field--wide">
+              <input name="is_student" type="checkbox" />
+              <span class="field__label field__label--inline">Current student</span>
+            </label>
+          </div>
+
+          <p id="form-error" class="form__error" role="alert" hidden></p>
+
+          <div class="form__actions">
+            <button type="submit" class="btn btn--primary" id="btn-submit">
+              <span class="btn__text">See cards</span>
+              <span class="btn__spinner" aria-hidden="true"></span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section id="panel-output" class="panel panel--output" aria-labelledby="title-output" hidden>
+        <header class="mast mast--compact">
+          <button type="button" class="back" id="btn-back" aria-label="Back to form">
+            <span class="back__line" aria-hidden="true"></span>
+            Back
+          </button>
+          <p class="mast__eyebrow">Results</p>
+          <h1 id="title-output" class="mast__title">Cards</h1>
+        </header>
+
+        <div id="output-meta" class="meta"></div>
+        <div id="output-tiers" class="tiers"></div>
+      </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='recommender.js') }}"></script>
+  </body>
+</html>
