@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 from utils import get_fraud_dataset_path, FRAUD_MODEL_PATH
 
@@ -19,6 +21,27 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 neg, pos = np.bincount(y_train)
 scale_pos_weight = neg / pos
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+logreg = LogisticRegression(
+    class_weight="balanced",
+    max_iter=1000,
+    random_state=42,
+)
+logreg.fit(X_train_scaled, y_train)
+
+logreg_pred = logreg.predict(X_test_scaled)
+logreg_prob = logreg.predict_proba(X_test_scaled)[:, 1]
+
+print("=== Logistic Regression ===")
+print(classification_report(y_test, logreg_pred))
+print("Confusion matrix:")
+print(confusion_matrix(y_test, logreg_pred))
+print("ROC AUC:", roc_auc_score(y_test, logreg_prob))
+print()
 
 model = xgb.XGBClassifier(
     objective="binary:logistic",
@@ -39,6 +62,7 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 y_prob = model.predict_proba(X_test)[:, 1]
 
+print("=== XGBoost ===")
 print(classification_report(y_test, y_pred))
 print("Confusion matrix:")
 print(confusion_matrix(y_test, y_pred))

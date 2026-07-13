@@ -1,126 +1,123 @@
-# Credit Card ML Project
+# Credit Card Fraud Detection
 
-A machine learning project for credit card fraud detection and eligibility recommendation. This project consists of two main components: an XGBoost-based fraud detection model and a rule-based credit card eligibility recommender system.
+A small machine learning project with two parts: an XGBoost model for credit card fraud detection on the public ULB Kaggle dataset, and a rule-based eligibility helper that maps a user profile to mainstream U.S. card ideas (educational only, not financial advice).
 
 ## Features
 
-- **Fraud Detection Model**: An XGBoost classifier trained to detect fraudulent credit card transactions from anonymized transaction data
-- **Eligibility Recommender**: A rule-based system that recommends credit cards based on credit score and annual income
+- **Fraud detection**: Train and evaluate an XGBoost binary classifier on anonymized transaction features, with class weighting for severe imbalance.
+- **Eligibility recommender**: Match a richer profile (score, income, location, housing, optional DTI, history, inquiries, spend, student flag) against a static catalog of cards, grouped into stronger match, compare carefully, and skip for now, each with pros, cons, and short profile notes.
+- **Web UI**: Minimal dark Flask app for the recommender with a form and a results view (`app.py`, `templates/`, `static/`).
 
-## Project Structure
+## Project structure
 
 ```
-credit_card_ml_project_v2/
-├── fraud_train.py          # Training script for fraud detection model
-├── fraud_predict.py        # Prediction demo using trained model
-├── eligibility_recommender.py  # Credit card recommendation system
-├── utils.py                # Utility functions for dataset and model paths
-├── requirements.txt        # Python dependencies
-└── README.md              # This file
+├── app.py                      # Flask server: UI + POST /api/recommend
+├── templates/
+│   └── index.html              # Recommender UI shell
+├── static/
+│   ├── recommender.css
+│   └── recommender.js
+├── card_catalog.py             # Card definitions (pros, cons, typical bands)
+├── eligibility_recommender.py  # Profile logic, CLI, structured JSON for API
+├── fraud_train.py              # Train XGBoost, save fraud_xgboost_model.json
+├── fraud_predict.py            # Demo scoring and optional threshold sweep
+├── utils.py                    # Kaggle dataset download helper, model path
+├── requirements.txt
+└── README.md
 ```
 
 ## Setup
 
 ### Prerequisites
 
-- Python 3.7 or higher
-- pip package manager
+- Python 3.10 or higher recommended (typing uses modern union syntax in places)
+- pip
 
 ### Installation
-
-1. Clone or download this repository
-
-2. Install required dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-This will install:
-- pandas
-- numpy
-- scikit-learn
-- xgboost
-- kagglehub
+Dependencies include pandas, numpy, scikit-learn, xgboost, kagglehub, and flask (for the UI).
 
-### Dataset
+### Fraud dataset
 
-The fraud detection model uses the Credit Card Fraud Detection dataset from Kaggle. The dataset is automatically downloaded via `kagglehub` when you first run the training script.
+The fraud pipeline uses the [Credit Card Fraud Detection](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud) dataset. The first run of `fraud_train.py` downloads it via `kagglehub` (network access required).
 
 ## Usage
 
-### Fraud Detection Model
+### Fraud detection
 
-#### Training
-
-Train the XGBoost fraud detection model:
+**Train** (writes `fraud_xgboost_model.json` in the project root):
 
 ```bash
 python fraud_train.py
 ```
 
-This script will:
-- Download the credit card fraud dataset (if not already present)
-- Split the data into training and testing sets
-- Train an XGBoost classifier with appropriate class weighting for imbalanced data
-- Evaluate the model and display performance metrics (classification report, confusion matrix, ROC AUC score)
-- Save the trained model to `fraud_xgboost_model.json`
-
-#### Prediction
-
-Run predictions on sample transactions:
+**Predict / demo** (requires the trained model file):
 
 ```bash
 python fraud_predict.py
 ```
 
-This script will:
-- Load the trained model (requires `fraud_train.py` to be run first)
-- Sample 5 random transactions from the dataset
-- Display predictions with fraud probabilities for each transaction
+Useful options:
 
-### Eligibility Recommender
+- `--n_samples N` — number of random rows to print (default 5)
+- `--threshold T` — probability cutoff for labeling fraud (default 0.5)
+- `--seed S` — RNG seed for sampling
+- `--sweep` — print precision, recall, and F1 across several thresholds on a larger random slice (`--sweep_size` controls slice size)
+- `--interactive` — prompts for the above (needs a TTY)
 
-Get credit card recommendations based on credit score and annual income:
+The script prints short context on the features (PCA components, amount, time), per-transaction scores, confusion matrix and classification report on the sample, and a short note on why accuracy alone can mislead under imbalance.
+
+### Eligibility recommender (CLI)
+
+Non-interactive mode requires **credit score**, **annual income**, **location** (e.g. state code or region), and **housing** (`rent`, `own`, or `other`). Optional flags: `--credit_history_years`, `--debt_to_income_ratio` (decimal or percent), `--employment_years`, `--recent_inquiries`, `--monthly_card_spend`, `--student`.
 
 ```bash
-python eligibility_recommender.py --credit_score 705 --income 72000
+python eligibility_recommender.py --credit_score 705 --income 72000 --location CA --housing rent \
+  --credit_history_years 4 --debt_to_income_ratio 0.22 --recent_inquiries 1 --monthly_card_spend 2500
 ```
 
-The recommender considers:
-- Credit score ranges: below 580, 580-669, 670-689, 690-739, 740+
-- Annual income ranges: below $40k, $40k-$80k, $80k+
-- Provides specific card recommendations with reasoning based on eligibility criteria
+Interactive prompts (TTY required if required CLI args are missing):
 
-Example output includes card recommendations such as:
-- Chase Sapphire Preferred/Reserve
-- American Express Platinum/Gold
-- Citi Double Cash
-- Secured or credit-builder cards for lower scores
-- Income-based warnings about annual fees
+```bash
+python eligibility_recommender.py --interactive
+```
 
-## Model Details
+Structured JSON (same logic as the CLI text output) is available from Python via `recommend_cards_structured(UserProfile(...))`, used by the web API.
 
-### Fraud Detection Model
+### Eligibility recommender (web UI)
 
-- **Algorithm**: XGBoost Classifier
-- **Objective**: Binary classification (fraud vs. legitimate)
-- **Features**: Anonymized transaction features (V1-V28, Amount, Time)
-- **Handling Imbalanced Data**: Uses `scale_pos_weight` to account for class imbalance
-- **Evaluation Metrics**: Classification report, confusion matrix, ROC AUC score
+From the project root:
 
-### Eligibility Recommender
+```bash
+python app.py
+```
 
-- **Type**: Rule-based system
-- **Inputs**: Credit score (integer) and annual income (float)
-- **Output**: Text-based recommendations with explanations
-- **Logic**: Matches credit score ranges to card types, then adjusts recommendations based on income level
+Open `http://127.0.0.1:5050` in a browser. Submit the form to call `POST /api/recommend` and render grouped cards on the results screen.
+
+## Model and recommender details
+
+### Fraud model
+
+- **Algorithm**: XGBoost classifier, binary logistic objective.
+- **Features**: `Time`, `Amount`, and anonymized `V1`–`V28` (PCA); no raw merchant or cardholder identifiers in this dataset.
+- **Imbalance**: `scale_pos_weight` derived from class counts in the training split.
+- **Artifacts**: Model saved as `fraud_xgboost_model.json` for `fraud_predict.py` and any custom code you add.
+
+### Eligibility recommender
+
+- **Catalog**: `card_catalog.py` holds a fixed list of common products with typical score bands, annual fee, pros, cons, and when people often skip a product.
+- **Scoring**: `eligibility_recommender.py` combines soft score-band fit, income versus fee comfort, optional DTI and history penalties, inquiry load, and simple product mismatch rules (for example, secured cards when the score is already very high).
+- **Outputs**: Plain text (`recommend_cards`) or JSON (`recommend_cards_structured`) with tiers `good`, `maybe`, and `avoid`.
 
 ## Notes
 
-- The fraud detection model requires the trained model file (`fraud_xgboost_model.json`) to be present for predictions
-- The eligibility recommender provides educational guidance only and should not be considered as financial advice
-- Credit card issuers consider many factors beyond credit score and income (payment history, credit utilization, recent inquiries, etc.)
+- Fraud training and prediction need network access at least once for dataset download.
+- The recommender is **not** financial or legal advice; issuers use proprietary underwriting and many factors not modeled here.
+- Card names and typical approval bands are rough public-style guidance only; always verify current terms, fees, and eligibility with the issuer.
 
 ## License
 
